@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	unrecognizedAddrType = fmt.Errorf("Unrecognized address type")
+	errBadAddrType = fmt.Errorf("Unrecognized address type")
 )
 
 // AddrSpec is used to return the target AddrSpec
@@ -28,15 +28,15 @@ type AddrSpec struct {
 	Port int
 }
 
-type Socks5Local struct {
+type Local struct {
 	faddr, baddr *net.TCPAddr
 }
 
-type Socks5Server struct {
+type Server struct {
 	server *net.TCPAddr
 }
 
-func NewSocks5Local(faddr, baddr string) *Socks5Local {
+func NewLocal(faddr, baddr string) *Local {
 	a1, err := net.ResolveTCPAddr("tcp", faddr)
 	if err != nil {
 		log.Fatalln("resolve frontend error:", err)
@@ -45,18 +45,18 @@ func NewSocks5Local(faddr, baddr string) *Socks5Local {
 	if err != nil {
 		log.Fatalln("resolve backend error:", err)
 	}
-	return &Socks5Local{a1, a2}
+	return &Local{a1, a2}
 }
 
-func NewSocks5Server(port string) *Socks5Server {
+func NewServer(port string) *Server {
 	addr, err := net.ResolveTCPAddr("tcp", port)
 	if err != nil {
 		log.Fatalln("resolve frontend error:", err)
 	}
-	return &Socks5Server{addr}
+	return &Server{addr}
 }
 
-func (s *Socks5Local) Start() {
+func (s *Local) Start() {
 	ln, err := net.ListenTCP("tcp", s.faddr)
 	if err != nil {
 		log.Fatal(err)
@@ -73,7 +73,7 @@ func (s *Socks5Local) Start() {
 	}
 }
 
-func (s *Socks5Local) handleConn(conn net.Conn) error {
+func (s *Local) handleConn(conn net.Conn) error {
 	bufConn := bufio.NewReader(conn)
 
 	version := []byte{0}
@@ -110,7 +110,7 @@ func (s *Socks5Local) handleConn(conn net.Conn) error {
 	return nil
 }
 
-func (s *Socks5Server) Start() {
+func (s *Server) Start() {
 	ln, err := net.ListenTCP("tcp", s.server)
 	if err != nil {
 		log.Fatal(err)
@@ -127,7 +127,7 @@ func (s *Socks5Server) Start() {
 	}
 }
 
-func (s *Socks5Server) handleConn(conn net.Conn) error {
+func (s *Server) handleConn(conn net.Conn) error {
 	bufConn := bufio.NewReader(conn)
 
 	header := []byte{0, 0, 0}
@@ -195,7 +195,7 @@ func readAddrSpec(r io.Reader) (*AddrSpec, error) {
 		}
 		d.Addr = string(fqdn)
 	default:
-		return nil, unrecognizedAddrType
+		return nil, errBadAddrType
 	}
 
 	// Read the port

@@ -12,6 +12,6 @@ func main() {
 	flag.StringVar(&baddr, "backend", "127.0.0.1:1984", "host:port of backend")
 	flag.Parse()
 
-	l := socks5.NewSocks5Local(faddr, baddr)
+	l := socks5.NewLocal(faddr, baddr)
 	l.Start()
 }

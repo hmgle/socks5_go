@@ -11,6 +11,6 @@ func main() {
 	flag.StringVar(&port, "port", ":1984", ":port listen on")
 	flag.Parse()
 
-	s := socks5.NewSocks5Server(port)
+	s := socks5.NewServer(port)
 	s.Start()
 }
