@@ -119,8 +119,12 @@ func (s *Local) handleConn(conn net.Conn) error {
 	}
 	lConn := NewConn(conn, nil)
 	sConn := NewConn(backConn, s.cipher)
-	go pipe(sConn, lConn)
-	go pipe(lConn, sConn)
+	readChan := make(chan int64)
+	writeChan := make(chan int64)
+	go pipe(sConn, lConn, writeChan)
+	go pipe(lConn, sConn, readChan)
+	<-readChan
+	<-writeChan
 	return nil
 }
 
@@ -171,8 +175,12 @@ func (s *Server) handleConn(conn net.Conn) error {
 	}
 
 	rConn := NewConn(remote, nil)
-	go pipe(rConn, cConn)
-	go pipe(cConn, rConn)
+	readChan := make(chan int64)
+	writeChan := make(chan int64)
+	go pipe(rConn, cConn, readChan)
+	go pipe(cConn, rConn, writeChan)
+	<-writeChan
+	<-readChan
 	return nil
 }
 
@@ -225,6 +233,11 @@ func readAddrSpec(r io.Reader) (*AddrSpec, error) {
 	return d, nil
 }
 
-func pipe(dst, src *Conn) {
-	io.Copy(dst, src)
+func pipe(dst, src *Conn, c chan int64) {
+	defer func() {
+		dst.CloseWrite()
+		src.CloseWrite()
+	}()
+	n, _ := io.Copy(dst, src)
+	c <- n
 }
