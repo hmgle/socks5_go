@@ -32,12 +32,14 @@ type AddrSpec struct {
 
 type Local struct {
 	faddr, baddr *net.TCPAddr
-	cipher       *tcfs.Cipher
+	cryptoMethod string
+	key          []byte
 }
 
 type Server struct {
-	server *net.TCPAddr
-	cipher *tcfs.Cipher
+	server       *net.TCPAddr
+	cryptoMethod string
+	key          []byte
 }
 
 func NewLocal(faddr, baddr string, cryptoMethod string, key []byte) *Local {
@@ -49,11 +51,7 @@ func NewLocal(faddr, baddr string, cryptoMethod string, key []byte) *Local {
 	if err != nil {
 		log.Fatalln("resolve backend error:", err)
 	}
-	var cipher *tcfs.Cipher
-	if len(key) > 0 {
-		cipher = tcfs.NewCipher(cryptoMethod, key)
-	}
-	return &Local{a1, a2, cipher}
+	return &Local{a1, a2, cryptoMethod, key}
 }
 
 func NewServer(port string, cryptoMethod string, key []byte) *Server {
@@ -61,11 +59,7 @@ func NewServer(port string, cryptoMethod string, key []byte) *Server {
 	if err != nil {
 		log.Fatalln("resolve frontend error:", err)
 	}
-	var cipher *tcfs.Cipher
-	if len(key) > 0 {
-		cipher = tcfs.NewCipher(cryptoMethod, key)
-	}
-	return &Server{addr, cipher}
+	return &Server{addr, cryptoMethod, key}
 }
 
 func (s *Local) Start() {
@@ -118,7 +112,12 @@ func (s *Local) handleConn(conn net.Conn) error {
 		return err
 	}
 	lConn := NewConn(conn, nil)
-	sConn := NewConn(backConn, s.cipher)
+	var sConn *Conn
+	if len(s.key) > 0 {
+		sConn = NewConn(backConn, tcfs.NewCipher(s.cryptoMethod, s.key))
+	} else {
+		sConn = NewConn(backConn, nil)
+	}
 	readChan := make(chan int64)
 	writeChan := make(chan int64)
 	go pipe(sConn, lConn, writeChan)
@@ -146,7 +145,12 @@ func (s *Server) Start() {
 }
 
 func (s *Server) handleConn(conn net.Conn) error {
-	cConn := NewConn(conn, s.cipher)
+	var cConn *Conn
+	if len(s.key) > 0 {
+		cConn = NewConn(conn, tcfs.NewCipher(s.cryptoMethod, s.key))
+	} else {
+		cConn = NewConn(conn, nil)
+	}
 	bufConn := bufio.NewReader(cConn)
 
 	header := []byte{0, 0, 0}
