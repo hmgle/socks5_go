@@ -226,10 +226,5 @@ func readAddrSpec(r io.Reader) (*AddrSpec, error) {
 }
 
 func pipe(dst, src *Conn) {
-	for {
-		_, err := io.Copy(dst, src)
-		if err != nil {
-			return
-		}
-	}
+	io.Copy(dst, src)
 }
