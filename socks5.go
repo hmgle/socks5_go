@@ -6,6 +6,8 @@ import (
 	"io"
 	"log"
 	"net"
+
+	"github.com/hmgle/tcfs-go"
 )
 
 const (
@@ -30,13 +32,15 @@ type AddrSpec struct {
 
 type Local struct {
 	faddr, baddr *net.TCPAddr
+	cipher       *tcfs.Cipher
 }
 
 type Server struct {
 	server *net.TCPAddr
+	cipher *tcfs.Cipher
 }
 
-func NewLocal(faddr, baddr string) *Local {
+func NewLocal(faddr, baddr string, cryptoMethod string, key []byte) *Local {
 	a1, err := net.ResolveTCPAddr("tcp", faddr)
 	if err != nil {
 		log.Fatalln("resolve frontend error:", err)
@@ -45,15 +49,23 @@ func NewLocal(faddr, baddr string) *Local {
 	if err != nil {
 		log.Fatalln("resolve backend error:", err)
 	}
-	return &Local{a1, a2}
+	var cipher *tcfs.Cipher
+	if len(key) > 0 {
+		cipher = tcfs.NewCipher(cryptoMethod, key)
+	}
+	return &Local{a1, a2, cipher}
 }
 
-func NewServer(port string) *Server {
+func NewServer(port string, cryptoMethod string, key []byte) *Server {
 	addr, err := net.ResolveTCPAddr("tcp", port)
 	if err != nil {
 		log.Fatalln("resolve frontend error:", err)
 	}
-	return &Server{addr}
+	var cipher *tcfs.Cipher
+	if len(key) > 0 {
+		cipher = tcfs.NewCipher(cryptoMethod, key)
+	}
+	return &Server{addr, cipher}
 }
 
 func (s *Local) Start() {
@@ -105,8 +117,10 @@ func (s *Local) handleConn(conn net.Conn) error {
 		log.Println(err)
 		return err
 	}
-	go pipe(backConn, conn)
-	go pipe(conn, backConn)
+	lConn := NewConn(conn, nil)
+	sConn := NewConn(backConn, s.cipher)
+	go pipe(sConn, lConn)
+	go pipe(lConn, sConn)
 	return nil
 }
 
@@ -128,7 +142,8 @@ func (s *Server) Start() {
 }
 
 func (s *Server) handleConn(conn net.Conn) error {
-	bufConn := bufio.NewReader(conn)
+	cConn := NewConn(conn, s.cipher)
+	bufConn := bufio.NewReader(cConn)
 
 	header := []byte{0, 0, 0}
 	if _, err := io.ReadAtLeast(bufConn, header, 3); err != nil {
@@ -148,14 +163,16 @@ func (s *Server) handleConn(conn net.Conn) error {
 		log.Println("bad addr")
 		return fmt.Errorf("Failed to read dest addr: %v", err)
 	}
-	conn.Write([]byte{0x05, 0, 0, 0x01, 0, 0, 0, 0, 0x19, 0x19})
+	cConn.Write([]byte{0x05, 0, 0, 0x01, 0, 0, 0, 0, 0x19, 0x19})
 	remote, err := net.Dial("tcp", fmt.Sprintf("%s:%d", dest.Addr, dest.Port))
 	if err != nil {
 		log.Println("net.Dial failed:", dest.Addr, dest.Port)
 		return err
 	}
-	go pipe(remote, conn)
-	go pipe(conn, remote)
+
+	rConn := NewConn(remote, nil)
+	go pipe(rConn, cConn)
+	go pipe(cConn, rConn)
 	return nil
 }
 
@@ -208,7 +225,7 @@ func readAddrSpec(r io.Reader) (*AddrSpec, error) {
 	return d, nil
 }
 
-func pipe(dst, src net.Conn) {
+func pipe(dst, src *Conn) {
 	for {
 		_, err := io.Copy(dst, src)
 		if err != nil {
