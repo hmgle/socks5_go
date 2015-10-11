@@ -1,3 +1,4 @@
+// Modify from https://github.com/getqujing/qtunnel/blob/master/src/tunnel/conn.go
 package socks5
 
 import (

@@ -1,0 +1,37 @@
+= SOCKS5_GO
+
+SOCKS5_go is ported from https://github.com/hmgle/socks5_c[socks5_c].
+
+== Install
+
+* Server
+
+----
+go get github.com/hmgle/socks5_go/cmd/socks5-server
+----
+
+* Local
+
+----
+go get github.com/hmgle/socks5_go/cmd/socks5-local
+----
+
+== Usage
+
+* Server
+
+----
+socks5-server -crypto 'rc4' -key 'yourkey' -port ':1984'
+----
+
+* Local
+
+----
+socks5-local -backend '127.0.0.1:1984' -crypto 'rc4' -key 'yourkey' -listen ':2080'
+# Just for test, you should not use Baidu for search!
+curl -v --socks5-hostname 127.0.0.1:2080 http://www.baidu.com
+----
+
+== License
+
+MIT
