@@ -89,7 +89,7 @@ func (s *Local) handleConn(conn net.Conn) error {
 	}
 	if version[0] != socks5Version {
 		err := fmt.Errorf("Unsupported SOCKS version: %v", version)
-		log.Println("[ERR] socks: %v", err)
+		log.Printf("[ERR] socks: %v\n", err)
 		return err
 	}
 	nmethods := []byte{0}
