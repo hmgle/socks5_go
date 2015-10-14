@@ -1,6 +1,6 @@
 = SOCKS5_GO
 
-SOCKS5_GO is ported from https://github.com/hmgle/socks5_c[socks5_c].
+SOCKS5_GO is a lightweight tunnel proxy which can help you get through firewalls. It is ported from https://github.com/hmgle/socks5_c[socks5_c].
 
 == Install
 
