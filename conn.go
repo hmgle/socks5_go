@@ -2,10 +2,7 @@
 // https://github.com/getqujing/qtunnel/blob/master/src/tunnel/conn.go
 package socks5
 
-import (
-	"net"
-	"reflect"
-)
+import "net"
 
 type Cipher interface {
 	Encrypt(dst, src []byte)
@@ -22,7 +19,7 @@ func NewConn(conn net.Conn, cipher Cipher) *Conn {
 }
 
 func (c *Conn) Read(b []byte) (int, error) {
-	if c.cipher == nil || reflect.ValueOf(c.cipher).IsNil() {
+	if c.cipher == nil {
 		return c.conn.Read(b)
 	}
 	n, err := c.conn.Read(b)
@@ -33,7 +30,7 @@ func (c *Conn) Read(b []byte) (int, error) {
 }
 
 func (c *Conn) Write(b []byte) (int, error) {
-	if c.cipher == nil || reflect.ValueOf(c.cipher).IsNil() {
+	if c.cipher == nil {
 		return c.conn.Write(b)
 	}
 	c.cipher.Encrypt(b, b)
