@@ -32,6 +32,14 @@ socks5-local -backend '127.0.0.1:1984' -crypto 'rc4' -key 'yourkey' -listen ':20
 curl -v --socks5-hostname 127.0.0.1:2080 http://www.baidu.com
 ----
 
+== Docker
+
+* Server(only)
+
+---
+docker run -e KEY=yourkey CRYPTO=rc4 -p 1984:1984 -p 1984:1984/udp -d zjl233/socks5-server:0.0.5
+---
+
 == License
 
 MIT
