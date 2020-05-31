@@ -240,7 +240,7 @@ func readAddrSpec(r io.Reader) (*AddrSpec, error) {
 func pipe(dst, src *Conn, c chan int64) {
 	defer func() {
 		dst.CloseWrite()
-		src.CloseWrite()
+		src.CloseRead()
 	}()
 	n, _ := io.Copy(dst, src)
 	c <- n
